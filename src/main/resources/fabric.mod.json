@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "id": "spear-lunge",
+  "version": "${version}",
+  "name": "Spear Lunge",
+  "description": "Trouser-Streak SpearKill port with basic target prediction and no NoFall toggling.",
+  "authors": [
+    "uniq"
+  ],
+  "contact": {},
+  "icon": "assets/spear-lunge/icon.png",
+  "environment": "client",
+  "entrypoints": {
+    "meteor": [
+      "com.spearkill.SpearLungeAddon"
+    ]
+  },
+  "custom": {
+    "meteor-client:color": "70, 200, 255",
+    "modmenu": {
+      "parent": {
+        "id": "meteor-client"
+      }
+    }
+  },
+  "depends": {
+    "java": ">=${jdk_version}",
+    "minecraft": "${minecraft_version}",
+    "meteor-client": "*"
+  }
+}
