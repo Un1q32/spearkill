@@ -199,9 +199,43 @@ public class SpearLunge extends Module {
             .visible(() -> stop.get() && mode.get() == Mode.Lunge)
             .build()
     );
+    private final Setting<Boolean> reengage = sgLunge.add(new BoolSetting.Builder()
+            .name("Re-engage")
+            .description("If the target is still alive after a pass, or you start too close, back off and lunge again.")
+            .defaultValue(true)
+            .visible(() -> mode.get() == Mode.Lunge)
+            .build()
+    );
+    private final Setting<Double> retreatDistance = sgLunge.add(new DoubleSetting.Builder()
+            .name("Retreat Distance")
+            .description("Distance to back away to before re-engaging.")
+            .defaultValue(8.0)
+            .min(3.0)
+            .sliderRange(3.0, 20.0)
+            .visible(() -> mode.get() == Mode.Lunge && reengage.get())
+            .build()
+    );
+    private final Setting<Double> retreatSpeed = sgLunge.add(new DoubleSetting.Builder()
+            .name("Retreat Speed")
+            .description("Speed used while backing away for another pass.")
+            .defaultValue(5.0)
+            .min(1.0)
+            .sliderRange(1.0, 10.0)
+            .visible(() -> mode.get() == Mode.Lunge && reengage.get())
+            .build()
+    );
+    private final Setting<Integer> reengageDelay = sgLunge.add(new IntSetting.Builder()
+            .name("Re-engage Delay")
+            .description("Ticks to wait after backing off before lunging again.")
+            .defaultValue(10)
+            .min(0)
+            .sliderRange(0, 40)
+            .visible(() -> mode.get() == Mode.Lunge && reengage.get())
+            .build()
+    );
     private final Setting<Double> targetPrediction = sgLunge.add(new DoubleSetting.Builder()
             .name("Target Prediction")
-            .description("Lead moving targets by this fraction of the estimated lunge travel time. 0 = no lead.")
+            .description("How far to lead moving targets, as a fraction of the estimated lunge travel time. 0 = no lead.")
             .defaultValue(1.0)
             .min(0.0)
             .sliderRange(0.0, 2.0)
@@ -233,6 +267,8 @@ public class SpearLunge extends Module {
     private Vec3 targetVelocity = Vec3.ZERO;
     private int lastTargetTick = -1;
     private int trackedTargetId = -1;
+    private boolean retreating = false;
+    private int retreatTicks = 0;
 
     public SpearLunge() {
         super(Categories.Combat, "spear-lunge", "Increases spear damage with a lunge. Ported from Trouser-Streak SpearKill.", "spearlunge");
@@ -268,6 +304,8 @@ public class SpearLunge extends Module {
         targetVelocity = Vec3.ZERO;
         lastTargetTick = -1;
         trackedTargetId = -1;
+        retreating = false;
+        retreatTicks = 0;
     }
 
     private boolean isUsingSpear() {
@@ -283,7 +321,15 @@ public class SpearLunge extends Module {
 
         currentlyCharging = isUsingSpear();
 
-        if (mode.get() == Mode.Lunge) return;
+        if (mode.get() == Mode.Lunge) {
+            if (currentlyCharging && retreating) {
+                handleReengage();
+            } else if (!currentlyCharging) {
+                retreating = false;
+                retreatTicks = 0;
+            }
+            return;
+        }
 
         if (currentlyCharging) {
             blinkChargeTicks++;
@@ -358,11 +404,42 @@ public class SpearLunge extends Module {
             }
         }
     }
+    private void handleReengage() {
+        if (killtarget == null || !killtarget.isAlive()) {
+            retreating = false;
+            retreatTicks = 0;
+            return;
+        }
+
+        double distance = mc.player.getEyePosition().distanceTo(killtarget.getBoundingBox().getCenter());
+        rotateToTarget(killtarget);
+
+        if (distance < retreatDistance.get()) {
+            Vec3 center = killtarget.getBoundingBox().getCenter();
+            Vec3 away = new Vec3(mc.player.getX() - center.x, 0, mc.player.getZ() - center.z);
+            if (away.lengthSqr() > 1.0E-6) {
+                mc.player.setSprinting(true);
+                mc.player.setDeltaMovement(away.normalize().scale(retreatSpeed.get()));
+            } else {
+                mc.player.setDeltaMovement(0, 0, 0);
+            }
+        } else {
+            mc.player.setDeltaMovement(0, 0, 0);
+        }
+
+        retreatTicks++;
+        if ((distance >= retreatDistance.get() && retreatTicks >= reengageDelay.get()) || retreatTicks > 40) {
+            retreating = false;
+            retreatTicks = 0;
+        }
+    }
+
     @EventHandler
     private void onRender(Render3DEvent event) {
         if (mc.player == null || mc.level == null) return;
 
         if (mode.get() == Mode.Lunge) {
+            if (retreating) return;
             if (currentlyCharging) {
                 if (killtarget == null) killtarget = target();
                 if (killtarget != null && !killtarget.isAlive()) {
@@ -381,6 +458,8 @@ public class SpearLunge extends Module {
                 killtarget = null;
                 firstPhase = false;
                 aboveTargetPos = null;
+                retreating = false;
+                retreatTicks = 0;
             }
             return;
         }
@@ -416,7 +495,10 @@ public class SpearLunge extends Module {
             boolean atTarget = playerBox.intersects(targetBox);
 
             if (atTarget) {
-                if (stop.get()) {
+                if (reengage.get() && killtarget.isAlive()) {
+                    retreating = true;
+                    retreatTicks = 0;
+                } else if (stop.get()) {
                     killtarget = null;
                     mc.player.setDeltaMovement(0, 0, 0);
                     mc.player.setSprinting(false);

@@ -2,19 +2,19 @@
 
 A Meteor Client addon for Minecraft **26.3**, based on Trouser-Streak's `SpearKill`.
 
-This is the base SpearKill port with two changes:
+The base Lunge/Blink module plus:
 
-- **Target prediction** for moving players. `Target Prediction` tracks observed target position changes and leads the aim/lunge by the estimated lunge travel time. `0` disables the lead.
-- **NoFall is never touched.** The original "Disable NoFall While Charging" setting and all NoFall toggling have been removed. Use Meteor NoFall exactly as normal.
-
-The rest is the original Lunge/Blink implementation, including the original `Stop on target` behavior and `Stop Distance`.
+- **Optional target prediction.** `Target Prediction` controls how far ahead to aim; set it to `0` to aim directly at the target. It tracks observed target position changes.
+- **Re-engage.** If a pass reaches the target and it is still alive, or if you start too close to the target, the module backs off to `Retreat Distance`, waits `Re-engage Delay`, and lunges again. It stops retreating after 40 ticks if something blocks it.
+- **NoFall is never touched.** There is no NoFall setting, import, or toggle. Use Meteor NoFall normally.
 
 ## Usage
 
 1. Put the jar in your `mods` folder next to Meteor Client.
-2. Enable **Spear Lunge** in the **Combat** category.
+2. Enable **Spear Lunge** in **Combat**.
 3. Hold a spear, look at the target, and hold right click.
-4. To test NoFall compatibility, enable **NoFall** in Meteor; the module will not turn it off.
+
+`Re-engage` is on by default. Turning it off restores the original `Stop on target` behavior. Setting `Target Prediction` to `0` aims directly at the target.
 
 ## Main settings
 
@@ -27,9 +27,13 @@ The rest is the original Lunge/Blink implementation, including the original `Sto
 | `Ignore Friends` | on | Never target Meteor friends. |
 | `Lunge Direction` | DirectionBased | DirectionBased, FromAbove, or Auto_FromAboveFirst. |
 | `SpearVelocity` | 5.0 | Velocity applied toward the target. |
-| `Stop on target` | on | Original SpearKill stop-at-target behavior. |
-| `Stop Distance` | 2.0 | Hitbox distance at which the base module stops. |
-| `Target Prediction` | 1.0 | Lead moving targets; 0 = no lead, 1 = estimated travel time, 2 = double. |
+| `Stop on target` | on | Original SpearKill stop-at-target behavior (when Re-engage is off). |
+| `Stop Distance` | 2.0 | Hitbox distance used by the original stop and by the close-range re-engage trigger. |
+| `Re-engage` | on | Back off and lunge again if the target survives a pass or you start too close. |
+| `Retreat Distance` | 8.0 | Distance to back away to before re-engaging. |
+| `Retreat Speed` | 5.0 | Speed used while backing away. |
+| `Re-engage Delay` | 10 | Ticks to wait after backing off before lunging again. |
+| `Target Prediction` | 1.0 | Lead amount: 0 = no lead, 1 = estimated travel time, 2 = double. |
 | `Lunge Delay Modifier` | 100% | How long to wait for the spear charge. |
 
 Blink settings are preserved from the original module.
@@ -37,7 +41,7 @@ Blink settings are preserved from the original module.
 ## Build
 
 ```bash
-./gradlew build
+./gradlew build --refresh-dependencies
 ```
 
 The jar is `build/libs/spear-lunge-1.0.0.jar`.

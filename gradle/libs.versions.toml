@@ -4,7 +4,7 @@ mod-version = "1.0.0"
 # Fabric (https://fabricmc.net/develop)
 jdk = "25"
 minecraft = "26.3"
-fabric-loader = "0.19.5"
+fabric-loader = "0.20.1"
 
 # Loom (https://github.com/FabricMC/fabric-loom)
 loom = "1.18-SNAPSHOT"
