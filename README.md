@@ -6,6 +6,7 @@ The base Lunge/Blink module plus:
 
 - **Optional target prediction.** `Target Prediction` controls how far ahead to aim; set it to `0` to aim directly at the target. It uses an intercept-time lead based on the target's observed velocity and closing speed.
 - **Automatic elytra handling.** Fall-flying players are chased directly (`DirectionBased`) and the lateral prediction lead is capped at 1 block, so a juke cannot pull the stab ray off them. Other targets keep your configured `Lunge Direction` and normal prediction. Turn off `Elytra Handling` to use the old behavior for every target.
+- **FromAbove fall protection.** While using `FromAbove`, the module caps the descent and resets fall distance on the way down, so the dive itself cannot deal fall damage. It does not import, toggle, or modify Meteor NoFall. Turn off `FromAbove Fall Protection` for full-speed dives with normal fall damage.
 - **Re-engage.** If a pass reaches the target and it is still alive, or if you start too close to the target, the module backs off to `Retreat Distance`, waits `Re-engage Delay`, and lunges again. It stops retreating after 40 ticks if something blocks it.
 - **NoFall is never touched.** There is no NoFall setting, import, or toggle. Use Meteor NoFall normally.
 
@@ -29,6 +30,7 @@ The base Lunge/Blink module plus:
 | `Lunge Direction` | FromAbove | DirectionBased, FromAbove, or Auto_FromAboveFirst. |
 | `Above Height` | 10.0 | Height above the target used by FromAbove. |
 | `Above Height Trigger Distance` | 3.0 | Distance to the above point before diving at the target. |
+| `FromAbove Fall Protection` | on | Caps the FromAbove descent and resets fall distance. Off = full-speed dives with normal fall damage. |
 | `SpearVelocity` | 5.0 | Velocity applied toward the target. |
 | `Stop on target` | on | Original SpearKill stop-at-target behavior (when Re-engage is off). |
 | `Stop Distance` | 2.0 | Hitbox distance used by the original stop and by the close-range re-engage trigger. |
@@ -55,6 +57,8 @@ The jar is `build/libs/spear-lunge-1.0.0.jar`.
 ## NoFall
 
 The module does not import, toggle, or otherwise modify Meteor NoFall. Enable NoFall normally and the lunge will leave it alone.
+
+`FromAbove` uses its own descent cap and packet-based fall-distance reset. That code is local to this module; it does not read or change NoFall's settings.
 
 ## Credits
 

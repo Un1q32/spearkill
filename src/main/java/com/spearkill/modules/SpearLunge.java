@@ -249,6 +249,14 @@ public class SpearLunge extends Module {
             .visible(() -> mode.get() == Mode.Lunge)
             .build()
     );
+    private final Setting<Boolean> fromAboveFallProtection = sgLunge.add(new BoolSetting.Builder()
+            .name("FromAbove Fall Protection")
+            .description("Caps the FromAbove descent and resets fall distance so dives do not cause fall damage. Disable for full-speed dives with normal fall damage.")
+            .defaultValue(true)
+            .visible(() -> mode.get() == Mode.Lunge
+                    && (LungeDirectionMode.get() == lungeMode.FromAbove || LungeDirectionMode.get() == lungeMode.Auto_FromAboveFirst))
+            .build()
+    );
     private final Setting<Integer> getreadyticksModifier = sgLunge.add(new IntSetting.Builder()
             .name("Lunge Delay Modifier")
             .description("Wait % amount of time until spear is ready before lunge.")
@@ -276,6 +284,8 @@ public class SpearLunge extends Module {
     private int trackedTargetId = -1;
     private boolean retreating = false;
     private int retreatTicks = 0;
+    private boolean fromAboveFallGuard = false;
+    private static final double FROM_ABOVE_MAX_FALL_STEP = 2.5;
 
     public SpearLunge() {
         super(Categories.Combat, "spear-lunge", "Increases spear damage with a lunge. Ported from Trouser-Streak SpearKill.", "spearlunge");
@@ -313,6 +323,7 @@ public class SpearLunge extends Module {
         trackedTargetId = -1;
         retreating = false;
         retreatTicks = 0;
+        fromAboveFallGuard = false;
     }
 
     private boolean isUsingSpear() {
@@ -329,6 +340,7 @@ public class SpearLunge extends Module {
         currentlyCharging = isUsingSpear();
 
         if (mode.get() == Mode.Lunge) {
+            handleFromAboveFall();
             if (currentlyCharging && retreating) {
                 handleReengage();
             } else if (!currentlyCharging) {
@@ -337,6 +349,8 @@ public class SpearLunge extends Module {
             }
             return;
         }
+
+        fromAboveFallGuard = false;
 
         if (currentlyCharging) {
             blinkChargeTicks++;
@@ -441,6 +455,41 @@ public class SpearLunge extends Module {
         }
     }
 
+    private void handleFromAboveFall() {
+        if (!fromAboveFallProtection.get()) {
+            fromAboveFallGuard = false;
+            return;
+        }
+        if (!fromAboveFallGuard || mc.player == null || mc.level == null) return;
+
+        if (mc.player.onGround()) {
+            if (!currentlyCharging) fromAboveFallGuard = false;
+            return;
+        }
+
+        if (mc.player.isFallFlying() || mc.player.getAbilities().flying
+                || mc.player.isInWater() || mc.player.isInLava()) {
+            fromAboveFallGuard = false;
+            return;
+        }
+
+        Vec3 velocity = mc.player.getDeltaMovement();
+        if (velocity.y < -FROM_ABOVE_MAX_FALL_STEP) {
+            mc.player.setDeltaMovement(velocity.x, -FROM_ABOVE_MAX_FALL_STEP, velocity.z);
+            velocity = mc.player.getDeltaMovement();
+        }
+
+        if (velocity.y < 0.0) {
+            // FromAbove dives can move more than three blocks per tick. Reset
+            // both sides' fall distance while descending so the landing tick
+            // cannot apply fall damage.
+            mc.player.fallDistance = 0.0;
+            if (mc.player.connection != null) {
+                mc.player.connection.send(new ServerboundMovePlayerPacket.StatusOnly(true, false));
+            }
+        }
+    }
+
     @EventHandler
     private void onRender(Render3DEvent event) {
         if (mc.player == null || mc.level == null) return;
@@ -529,6 +578,10 @@ public class SpearLunge extends Module {
             }
 
             lungeMode directionMode = elytraTarget ? lungeMode.DirectionBased : LungeDirectionMode.get();
+            if (fromAboveFallProtection.get() && !elytraTarget
+                    && (directionMode == lungeMode.FromAbove || directionMode == lungeMode.Auto_FromAboveFirst)) {
+                fromAboveFallGuard = true;
+            }
             switch (directionMode) {
                 case DirectionBased -> {
                     Vec3 targetDir = predictedTarget.subtract(mc.player.position()).normalize();
