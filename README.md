@@ -4,7 +4,7 @@ A Meteor Client addon for Minecraft **26.3**, based on Trouser-Streak's `SpearKi
 
 The base Lunge/Blink module plus:
 
-- **Optional target prediction.** `Target Prediction` controls how far ahead to aim; set it to `0` to aim directly at the target. It tracks observed target position changes.
+- **Optional target prediction.** `Target Prediction` controls how far ahead to aim; set it to `0` to aim directly at the target. It uses an intercept-time lead based on the target's observed velocity and closing speed.
 - **Re-engage.** If a pass reaches the target and it is still alive, or if you start too close to the target, the module backs off to `Retreat Distance`, waits `Re-engage Delay`, and lunges again. It stops retreating after 40 ticks if something blocks it.
 - **NoFall is never touched.** There is no NoFall setting, import, or toggle. Use Meteor NoFall normally.
 
@@ -33,7 +33,7 @@ The base Lunge/Blink module plus:
 | `Retreat Distance` | 8.0 | Distance to back away to before re-engaging. |
 | `Retreat Speed` | 5.0 | Speed used while backing away. |
 | `Re-engage Delay` | 10 | Ticks to wait after backing off before lunging again. |
-| `Target Prediction` | 1.0 | Lead amount: 0 = no lead, 1 = estimated travel time, 2 = double. |
+| `Target Prediction` | 1.0 | Intercept lead: 0 = no lead, 1 = estimated intercept, 2 = double. |
 | `Lunge Delay Modifier` | 100% | How long to wait for the spear charge. |
 
 Blink settings are preserved from the original module.

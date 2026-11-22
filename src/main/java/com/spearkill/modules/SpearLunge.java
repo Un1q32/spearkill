@@ -597,7 +597,7 @@ public class SpearLunge extends Module {
         if (elapsed <= 0) return;
 
         Vec3 sample = pos.subtract(lastTargetPos).scale(1.0 / elapsed);
-        targetVelocity = targetVelocity.lerp(sample, 0.5);
+        targetVelocity = targetVelocity.lerp(sample, 0.6);
         lastTargetPos = pos;
         lastTargetTick = tick;
     }
@@ -607,10 +607,25 @@ public class SpearLunge extends Module {
         double prediction = targetPrediction.get();
         if (prediction <= 0.0) return center;
 
-        double speed = Math.max(getLungeStrength.get(), 0.1);
-        double distance = mc.player.getEyePosition().distanceTo(center);
-        double ticks = Math.min(distance / speed, 20.0) * prediction;
-        Vec3 lead = targetVelocity.scale(ticks);
+        Vec3 eye = mc.player.getEyePosition();
+        double lungeSpeed = Math.max(getLungeStrength.get(), 0.1);
+        double distance = eye.distanceTo(center);
+        double ticks = Math.min(distance / lungeSpeed, 20.0);
+
+        // Intercept-time lead: account for the target's closing speed rather
+        // than assuming the lunge always takes distance / SpearVelocity.
+        for (int i = 0; i < 3; i++) {
+            Vec3 predicted = center.add(targetVelocity.scale(ticks));
+            Vec3 delta = predicted.subtract(eye);
+            double predictedDistance = delta.length();
+            if (predictedDistance < 1.0E-4) break;
+
+            double closing = lungeSpeed - targetVelocity.dot(delta.normalize());
+            if (closing < 0.5) closing = 0.5;
+            ticks = Math.min(predictedDistance / closing, 20.0);
+        }
+
+        Vec3 lead = targetVelocity.scale(ticks).scale(prediction);
         if (lead.lengthSqr() > 400.0) lead = lead.normalize().scale(20.0);
         return center.add(lead);
     }
