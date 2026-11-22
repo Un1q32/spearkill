@@ -242,6 +242,13 @@ public class SpearLunge extends Module {
             .visible(() -> mode.get() == Mode.Lunge)
             .build()
     );
+    private final Setting<Boolean> elytraHandling = sgLunge.add(new BoolSetting.Builder()
+            .name("Elytra Handling")
+            .description("Chase fall-flying players directly and cap the lateral prediction lead. Other targets keep your configured Lunge Direction.")
+            .defaultValue(true)
+            .visible(() -> mode.get() == Mode.Lunge)
+            .build()
+    );
     private final Setting<Integer> getreadyticksModifier = sgLunge.add(new IntSetting.Builder()
             .name("Lunge Delay Modifier")
             .description("Wait % amount of time until spear is ready before lunge.")
@@ -512,7 +519,17 @@ public class SpearLunge extends Module {
             Vec3 viewDir;
 
             if (killtarget == null) return;
-            switch (LungeDirectionMode.get()) {
+
+            boolean elytraTarget = isElytraTarget(killtarget);
+            if (elytraTarget) {
+                // FromAbove commits to a one-time point above the target.
+                // A fall-flying target leaves that point almost immediately.
+                firstPhase = false;
+                aboveTargetPos = null;
+            }
+
+            lungeMode directionMode = elytraTarget ? lungeMode.DirectionBased : LungeDirectionMode.get();
+            switch (directionMode) {
                 case DirectionBased -> {
                     Vec3 targetDir = predictedTarget.subtract(mc.player.position()).normalize();
                     viewDir = targetDir;
@@ -627,7 +644,31 @@ public class SpearLunge extends Module {
 
         Vec3 lead = targetVelocity.scale(ticks).scale(prediction);
         if (lead.lengthSqr() > 400.0) lead = lead.normalize().scale(20.0);
+
+        if (isElytraTarget(target)) {
+            // The spear stabs along a look ray. Only the part of the lead that
+            // is perpendicular to the aim line moves that ray off the target,
+            // so keep the lateral offset small enough to stay in the hitbox.
+            Vec3 toCenter = center.subtract(eye);
+            double distanceToCenter = toCenter.length();
+            if (distanceToCenter > 1.0E-4) {
+                Vec3 aimDir = toCenter.scale(1.0 / distanceToCenter);
+                Vec3 lateral = lead.subtract(aimDir.scale(lead.dot(aimDir)));
+                double maxLateral = 1.0;
+                if (lateral.lengthSqr() > maxLateral * maxLateral) {
+                    lateral = lateral.normalize().scale(maxLateral);
+                }
+                lead = lateral;
+            }
+        }
+
         return center.add(lead);
+    }
+
+    private boolean isElytraTarget(Entity target) {
+        return elytraHandling.get()
+                && target instanceof Player player
+                && player.isFallFlying();
     }
 
     private void rotateToPoint(Vec3 targetPos) {
