@@ -75,7 +75,7 @@ public class SpearLunge extends Module {
     private final Setting<Boolean> ignorefriends = sgGeneral.add(new BoolSetting.Builder()
             .name("Ignore Friends")
             .description("Do not Spear Kill friends.")
-            .defaultValue(true)
+            .defaultValue(false)
             .build()
     );
 
@@ -146,7 +146,7 @@ public class SpearLunge extends Module {
     private final Setting<lungeMode> LungeDirectionMode = sgLunge.add(new EnumSetting.Builder<lungeMode>()
             .name("Lunge Direction")
             .description("DirectionBased = toward look direction, FromAbove = Stab from above, Auto_FromAboveFirst = Stab from above, unless the above position or path to target from above position is invalid.")
-            .defaultValue(lungeMode.DirectionBased)
+            .defaultValue(lungeMode.FromAbove)
             .build()
     );
     private final Setting<Double> aboveHeight = sgLunge.add(new DoubleSetting.Builder()
@@ -218,7 +218,7 @@ public class SpearLunge extends Module {
     private final Setting<Double> retreatSpeed = sgLunge.add(new DoubleSetting.Builder()
             .name("Retreat Speed")
             .description("Speed used while backing away for another pass.")
-            .defaultValue(5.0)
+            .defaultValue(10.0)
             .min(1.0)
             .sliderRange(1.0, 10.0)
             .visible(() -> mode.get() == Mode.Lunge && reengage.get())
@@ -227,7 +227,7 @@ public class SpearLunge extends Module {
     private final Setting<Integer> reengageDelay = sgLunge.add(new IntSetting.Builder()
             .name("Re-engage Delay")
             .description("Ticks to wait after backing off before lunging again.")
-            .defaultValue(10)
+            .defaultValue(0)
             .min(0)
             .sliderRange(0, 40)
             .visible(() -> mode.get() == Mode.Lunge && reengage.get())

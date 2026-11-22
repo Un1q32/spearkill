@@ -25,15 +25,17 @@ The base Lunge/Blink module plus:
 | `Max Targeting Range` | 256 | Maximum acquisition range. |
 | `Target List Mode` | Blacklist | Whitelist or blacklist the selected entity types. |
 | `Target Entities` | empty | Entity types to include/exclude. |
-| `Ignore Friends` | on | Never target Meteor friends. |
-| `Lunge Direction` | DirectionBased | DirectionBased, FromAbove, or Auto_FromAboveFirst. |
+| `Ignore Friends` | off | Never target Meteor friends. |
+| `Lunge Direction` | FromAbove | DirectionBased, FromAbove, or Auto_FromAboveFirst. |
+| `Above Height` | 10.0 | Height above the target used by FromAbove. |
+| `Above Height Trigger Distance` | 3.0 | Distance to the above point before diving at the target. |
 | `SpearVelocity` | 5.0 | Velocity applied toward the target. |
 | `Stop on target` | on | Original SpearKill stop-at-target behavior (when Re-engage is off). |
 | `Stop Distance` | 2.0 | Hitbox distance used by the original stop and by the close-range re-engage trigger. |
 | `Re-engage` | on | Back off and lunge again if the target survives a pass or you start too close. |
 | `Retreat Distance` | 8.0 | Distance to back away to before re-engaging. |
-| `Retreat Speed` | 5.0 | Speed used while backing away. |
-| `Re-engage Delay` | 10 | Ticks to wait after backing off before lunging again. |
+| `Retreat Speed` | 10.0 | Speed used while backing away. |
+| `Re-engage Delay` | 0 | Ticks to wait after backing off before lunging again. |
 | `Target Prediction` | 1.0 | Intercept lead: 0 = no lead, 1 = estimated intercept, 2 = double. |
 | `Elytra Handling` | on | Fall-flying players use `DirectionBased` and a 1-block lateral lead; other targets keep `Lunge Direction` and normal prediction. |
 | `Lunge Delay Modifier` | 100% | How long to wait for the spear charge. |
