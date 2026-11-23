@@ -285,7 +285,6 @@ public class SpearLunge extends Module {
     private boolean retreating = false;
     private int retreatTicks = 0;
     private boolean fromAboveFallGuard = false;
-    private int fromAboveGroundTicks = 0;
     private static final double FROM_ABOVE_MAX_FALL_STEP = 2.5;
 
     public SpearLunge() {
@@ -325,7 +324,6 @@ public class SpearLunge extends Module {
         retreating = false;
         retreatTicks = 0;
         fromAboveFallGuard = false;
-        fromAboveGroundTicks = 0;
     }
 
     private boolean isUsingSpear() {
@@ -342,11 +340,6 @@ public class SpearLunge extends Module {
         currentlyCharging = isUsingSpear();
 
         if (mode.get() == Mode.Lunge) {
-            if (fromAboveFallProtection.get() && currentlyCharging
-                    && LungeDirectionMode.get() != lungeMode.DirectionBased
-                    && !isElytraTarget(killtarget)) {
-                fromAboveFallGuard = true;
-            }
             handleFromAboveFall();
             if (currentlyCharging && retreating) {
                 handleReengage();
@@ -465,23 +458,14 @@ public class SpearLunge extends Module {
     private void handleFromAboveFall() {
         if (!fromAboveFallProtection.get()) {
             fromAboveFallGuard = false;
-            fromAboveGroundTicks = 0;
             return;
         }
         if (!fromAboveFallGuard || mc.player == null || mc.level == null) return;
 
         if (mc.player.onGround()) {
-            fromAboveGroundTicks++;
-            // Keep the guard briefly after landing so a bounce or a late
-            // server movement packet cannot turn into a second fall.
-            if (!currentlyCharging && fromAboveGroundTicks > 5) {
-                fromAboveFallGuard = false;
-                fromAboveGroundTicks = 0;
-            }
+            if (!currentlyCharging) fromAboveFallGuard = false;
             return;
         }
-
-        fromAboveGroundTicks = 0;
 
         if (mc.player.isFallFlying() || mc.player.getAbilities().flying
                 || mc.player.isInWater() || mc.player.isInLava()) {
@@ -492,23 +476,13 @@ public class SpearLunge extends Module {
         Vec3 velocity = mc.player.getDeltaMovement();
         if (velocity.y < -FROM_ABOVE_MAX_FALL_STEP) {
             mc.player.setDeltaMovement(velocity.x, -FROM_ABOVE_MAX_FALL_STEP, velocity.z);
-        }
-    }
-
-    @EventHandler
-    private void onPostTick(TickEvent.Post event) {
-        if (!fromAboveFallProtection.get() || !fromAboveFallGuard || mode.get() != Mode.Lunge) return;
-        if (mc.player == null || mc.level == null || mc.player.onGround()) return;
-
-        if (mc.player.isFallFlying() || mc.player.getAbilities().flying
-                || mc.player.isInWater() || mc.player.isInLava()) {
-            return;
+            velocity = mc.player.getDeltaMovement();
         }
 
-        if (mc.player.getDeltaMovement().y < 0.0) {
-            // Send the reset after the movement tick. A high-speed FromAbove
-            // dive can move more than three blocks in a tick, so the server
-            // must see onGround before its next fall-damage check.
+        if (velocity.y < 0.0) {
+            // FromAbove dives can move more than three blocks per tick. Reset
+            // both sides' fall distance while descending so the landing tick
+            // cannot apply fall damage.
             mc.player.fallDistance = 0.0;
             if (mc.player.connection != null) {
                 mc.player.connection.send(new ServerboundMovePlayerPacket.StatusOnly(true, false));
@@ -604,6 +578,10 @@ public class SpearLunge extends Module {
             }
 
             lungeMode directionMode = elytraTarget ? lungeMode.DirectionBased : LungeDirectionMode.get();
+            if (fromAboveFallProtection.get() && !elytraTarget
+                    && (directionMode == lungeMode.FromAbove || directionMode == lungeMode.Auto_FromAboveFirst)) {
+                fromAboveFallGuard = true;
+            }
             switch (directionMode) {
                 case DirectionBased -> {
                     Vec3 targetDir = predictedTarget.subtract(mc.player.position()).normalize();
